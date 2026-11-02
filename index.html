@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ryley's Atlas</title>
+<meta name="description" content="A fantasy adventure-map dashboard: calendar, quests, oracle, weather, almanac, portals, and deeds.">
+<meta name="theme-color" content="#013324">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Atlas">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=IM+Fell+English:ital@0;1&display=swap">
+<link rel="stylesheet" href="atlas.css">
+</head>
+<body>
+<canvas id="fireflies" aria-hidden="true"></canvas>
+<div class="wrap">
+
+<header class="hero">
+  <svg class="compass" viewBox="0 0 100 100" aria-hidden="true">
+    <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--gold)"/>
+    <circle cx="50" cy="50" r="38" fill="none" stroke="currentColor" stroke-width=".8" style="color:var(--line)"/>
+    <g style="color:var(--forest2)" fill="currentColor">
+      <polygon points="50,6 56,44 50,50 44,44"/><polygon points="50,94 56,56 50,50 44,56" opacity=".55"/>
+      <polygon points="6,50 44,44 50,50 44,56" opacity=".55"/><polygon points="94,50 56,44 50,50 56,56" opacity=".55"/>
+    </g>
+    <g style="color:var(--gold)" fill="currentColor" opacity=".8">
+      <polygon points="50,50 22,22 44,46"/><polygon points="50,50 78,22 56,46"/><polygon points="50,50 78,78 56,54"/><polygon points="50,50 22,78 44,54"/>
+    </g>
+    <circle cx="50" cy="50" r="4" style="fill:var(--gold)"/>
+    <text x="50" y="16" text-anchor="middle" font-family="Cinzel,serif" font-size="9" font-weight="700" style="fill:var(--forest2)">N</text>
+  </svg>
+  <div class="hero-text">
+    <h1 id="greet">Good Morrow, Guildmaster</h1>
+    <div class="sub" id="dateline">The map unrolls.</div>
+  </div>
+  <div class="hero-right">
+    <div class="badge" id="badge">
+      <svg class="seal" viewBox="0 0 60 60" aria-hidden="true">
+        <circle cx="30" cy="30" r="27" style="fill:var(--forest)"/>
+        <circle cx="30" cy="30" r="22" fill="none" stroke-width="1.5" style="stroke:var(--gold2)"/>
+        <text id="lvlnum" x="30" y="37" text-anchor="middle" font-family="Cinzel,serif" font-size="20" font-weight="900" style="fill:var(--gold2)">1</text>
+      </svg>
+      <div style="min-width:0">
+        <div class="rank" id="rank">Wanderer</div>
+        <div class="xp" id="xpline">0 XP</div>
+        <div class="xpbar"><i id="xpfill"></i></div>
+      </div>
+    </div>
+    <button class="iconbtn" id="openKeys" type="button" aria-label="Open the Keeper's Keys (settings)" title="The Keeper's Keys">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v3M21 12v2"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="banner" id="banner" hidden></div>
+
+<details class="legend" id="legend">
+  <summary>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg>
+    Map Legend: Choose Your Calendars
+  </summary>
+  <div class="sheet">
+    <p>Tick the realms you want shown on the Tavern Board. Your choices are saved.</p>
+    <div class="calgrid" id="calgrid"><span class="note">Connect Google in the Keeper's Keys to see your calendars.</span></div>
+    <div class="tools">
+      <button class="ghost" id="calAll" type="button">Show All</button>
+      <button class="ghost" id="calNone" type="button">Hide All</button>
+    </div>
+  </div>
+</details>
+
+<main class="map">
+
+  <section class="region w6" id="tavern">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner br"></i><i class="corner bl"></i>
+    <div class="rh">
+      <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10l9-7 9 7v11H3z"/><path d="M9 21v-7h6v7"/></svg>The Tavern Board</h2>
+      <span class="sub">The week's engagements</span>
+    </div>
+    <div class="rule"></div>
+    <div id="nextup"></div>
+    <div class="days" id="days"><span class="note">Connect Google in the Keeper's Keys to fill the board.</span></div>
+    <div id="tavernMsg"></div>
+  </section>
+
+  <section class="region w6" id="quests">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner br"></i><i class="corner bl"></i>
+    <div class="rh">
+      <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6M9 13h7M9 17h5"/></svg>The Quest Log</h2>
+      <span class="sub" id="questSub">From Todoist</span>
+    </div>
+    <div class="rule"></div>
+    <div id="qbody"><span class="note">Add your Todoist token in the Keeper's Keys to unfurl the scroll.</span></div>
+    <div id="questMsg"></div>
+  </section>
+
+  <section class="region w8 oracle" id="oracle">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner br"></i><i class="corner bl"></i>
+    <div class="rh">
+      <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M12 4v2M12 18v2M4 12h2M18 12h2M8 12a4 4 0 0 1 4-4"/></svg>The Oracle</h2>
+      <span class="sub">A reading for the day ahead</span>
+    </div>
+    <div class="rule"></div>
+    <p class="reading" id="reading">The Oracle waits in silence. Ask, and the day's omens will be read from your board and your quests.</p>
+    <div class="row">
+      <button class="primary" id="askOracle" type="button">Consult the Oracle</button>
+      <span class="note" id="oracleMsg"></span>
+    </div>
+  </section>
+
+  <section class="region w4" id="pool">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner br"></i><i class="corner bl"></i>
+    <div class="rh">
+      <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 18c3-4 5-4 8 0s5 4 8 0"/><path d="M12 3a6 6 0 0 1 6 6c0 2-1 3-2 4H8c-1-1-2-2-2-4a6 6 0 0 1 6-6z"/></svg>The Scrying Pool</h2>
+      <span class="sub" id="poolSub">Skies over the realm</span>
+    </div>
+    <div class="rule"></div>
+    <div class="wx" id="wx"><span class="note">Gazing into the mist...</span></div>
+    <div class="forecast" id="forecast"></div>
+    <div class="pool">
+      <div class="moon" aria-hidden="true"><div class="shade" id="moonShade"></div></div>
+      <dl>
+        <dt>Moon</dt><dd id="moonName">...</dd>
+        <dt>Sunrise</dt><dd id="sunrise">...</dd>
+        <dt>Sunset</dt><dd id="sunset">...</dd>
+        <dt>Daylight</dt><dd id="daylen">...</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section class="region w6" id="almanac">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner br"></i><i class="corner bl"></i>
+    <div class="rh">
+      <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v5M15 4v5"/></svg>The Almanac</h2>
+      <span class="sub">Feast days and festivities</span>
+    </div>
+    <div class="rule"></div>
+    <div class="alm" id="alm"><span class="note">Connect Google to turn the pages.</span></div>
+    <div id="almMsg"></div>
+  </section>
+
+  <section class="region w6" id="portals">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner br"></i><i class="corner bl"></i>
+    <div class="rh">
+      <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 21V9a6 6 0 0 1 12 0v12"/><path d="M4 21h16M9 21v-5h6v5"/></svg>The Portals</h2>
+      <span class="sub">Doorways to other realms</span>
+    </div>
+    <div class="rule"></div>
+    <div class="portals" id="portalgrid"></div>
+    <form class="addportal" id="addportal">
+      <input id="pname" placeholder="Name" aria-label="Bookmark name" maxlength="24" required>
+      <input id="purl" placeholder="https://..." aria-label="Bookmark link" type="url" required>
+      <button class="ghost" type="submit">Open a Portal</button>
+    </form>
+  </section>
+
+  <section class="region w12" id="deeds">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner br"></i><i class="corner bl"></i>
+    <div class="rh">
+      <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/></svg>The Hall of Deeds</h2>
+      <span class="sub">Experience, streaks, and the chronicle</span>
+    </div>
+    <div class="rule"></div>
+    <div class="deeds">
+      <div class="stat"><div class="v" id="sStreak">0</div><div class="l">Day Streak</div></div>
+      <div class="stat"><div class="v" id="sToday">0</div><div class="l">Quests Today</div></div>
+      <div class="stat"><div class="v" id="sTotal">0</div><div class="l">Quests Ever</div></div>
+    </div>
+    <div class="week" id="week" aria-label="Last fourteen days"></div>
+    <ul class="deedlog" id="deedlog"><li class="note">No deeds recorded yet. Complete a quest to begin the chronicle.</li></ul>
+    <p class="note" id="deedsMsg" style="margin:10px 0 0"></p>
+  </section>
+
+</main>
+</div>
+
+<div class="modal" id="keys" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="keysTitle">
+    <div class="rh">
+      <h2 id="keysTitle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v3M21 12v2"/></svg>The Keeper's Keys</h2>
+      <button class="ghost" id="closeKeys" type="button">Close</button>
+    </div>
+    <div class="rule"></div>
+    <p class="note" style="margin:0 0 14px">Keys are stored only in this browser. Set them once on each device. Your XP, bookmarks, and calendar choices sync through your Google Drive once Google is connected.</p>
+
+    <fieldset>
+      <legend>Google Calendar</legend>
+      <label for="gclient">OAuth Client ID</label>
+      <input id="gclient" placeholder="123456789-abc.apps.googleusercontent.com" autocomplete="off" spellcheck="false">
+      <div class="row">
+        <button class="primary" id="gconnect" type="button">Connect Google</button>
+        <button class="ghost" id="gdisconnect" type="button">Disconnect</button>
+        <span class="note" id="gstatus">Not connected</span>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Todoist</legend>
+      <label for="tdtoken">API Token</label>
+      <input id="tdtoken" type="password" placeholder="Paste your Todoist API token" autocomplete="off" spellcheck="false">
+      <label for="tdproject">Project to show as the Quest Log</label>
+      <select id="tdproject"><option value="">Save the token to load projects</option></select>
+    </fieldset>
+
+    <fieldset>
+      <legend>The Oracle (optional)</legend>
+      <label for="akey">Anthropic API Key</label>
+      <input id="akey" type="password" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
+      <label for="amodel">Model</label>
+      <input id="amodel" placeholder="claude-opus-5-5" autocomplete="off" spellcheck="false">
+      <p class="note">Without a key, the Oracle still speaks, but from a book of stock omens rather than a live reading.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Location for the Scrying Pool</legend>
+      <label for="city">City</label>
+      <div class="row">
+        <input id="city" placeholder="Austin" autocomplete="off">
+        <button class="ghost" id="findCity" type="button">Find</button>
+      </div>
+      <p class="note" id="cityResult"></p>
+    </fieldset>
+
+    <div class="row" style="justify-content:flex-end;margin-top:6px">
+      <button class="primary" id="saveKeys" type="button">Save Keys</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="atlas.js"></script>
+</body>
+</html>
