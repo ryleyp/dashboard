@@ -92,11 +92,11 @@
   <section class="region w6" id="quests">
     <i class="corner tl"></i><i class="corner tr"></i><i class="corner br"></i><i class="corner bl"></i>
     <div class="rh">
-      <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6M9 13h7M9 17h5"/></svg>The Quest Log</h2>
+      <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6M9 13h7M9 17h5"/></svg>The Quest Log<span class="qcount" id="questCount" hidden></span></h2>
       <span class="sub" id="questSub">Active quests, from Todoist</span>
     </div>
     <div class="rule"></div>
-    <div id="qbody"><span class="note">Add your Todoist token in the Crawler Menu to load your quests.</span></div>
+    <div id="qbody" class="qscroll" tabindex="0" aria-label="Quest list"><span class="note">Add your Todoist token in the Crawler Menu to load your quests.</span></div>
     <div id="questMsg"></div>
   </section>
 

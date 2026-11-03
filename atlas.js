@@ -332,9 +332,24 @@
     if (t.recurring) txt += " (repeats)";
     return { txt, over: diff < 0, today: diff === 0, ts: due.getTime() };
   }
+  function shortDue(t) {
+    if (!t.dueDate) return { txt: "", cls: "" };
+    const [y, m, d] = t.dueDate.slice(0, 10).split("-").map(Number); const due = new Date(y, m - 1, d);
+    const t0 = new Date(); t0.setHours(0, 0, 0, 0); const diff = Math.round((due - t0) / 86400000);
+    let txt = diff === 0 ? "Today" : diff === 1 ? "Tmrw" : diff < 0 ? (-diff) + "d late" : diff < 7 ? due.toLocaleDateString([], { weekday: "short" }) : due.toLocaleDateString([], { month: "short", day: "numeric" });
+    if (t.recurring) txt += " \u21bb";
+    return { txt, cls: diff < 0 ? "over" : diff === 0 ? "today" : "" };
+  }
+  function updateQuestFade() {
+    const b = $("qbody");
+    b.classList.toggle("more-below", b.scrollHeight - b.clientHeight - b.scrollTop > 4);
+  }
+  $("qbody").addEventListener("scroll", updateQuestFade, { passive: true });
+  addEventListener("resize", updateQuestFade);
   function renderQuests() {
-    const body = $("qbody"); body.innerHTML = "";
-    if (!tasks.length) { body.innerHTML = '<span class="note">No active quests. Suspicious, but enjoy it.</span>'; return; }
+    const body = $("qbody"); const keepScroll = body.scrollTop; body.innerHTML = "";
+    const cnt = $("questCount"); cnt.textContent = tasks.length; cnt.hidden = !tasks.length;
+    if (!tasks.length) { body.innerHTML = '<span class="note">No active quests. Suspicious, but enjoy it.</span>'; updateQuestFade(); return; }
     const urgent = tasks.filter((t) => { const d = dueInfo(t); return d.over || d.today; });
     const groups = []; if (urgent.length) groups.push({ name: "Urgent Quests", list: urgent });
     const bySec = {}; tasks.filter((t) => !urgent.includes(t)).forEach((t) => { const k = t.sectionId || "_"; (bySec[k] = bySec[k] || []).push(t); });
@@ -346,14 +361,20 @@
       wrap.innerHTML = "<h3>" + esc(g.name) + '<span class="cnt">' + g.list.length + '</span></h3><div class="qlist"></div>';
       const ql = wrap.querySelector(".qlist");
       g.list.forEach((t) => {
-        const d = dueInfo(t); const div = document.createElement("div"); div.className = "q";
+        const d = dueInfo(t); const sd = shortDue(t);
+        const div = document.createElement("div"); div.className = "q " + esc(t.priority);
         const labels = t.labels.map((l) => '<span class="lab">#' + esc(l) + "</span>").join("");
-        div.innerHTML = '<button class="chk" type="button" aria-label="Complete quest"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 7"/></svg></button><span class="c">' + esc(t.content) + '<small class="' + (d.over ? "over" : "") + '">' + labels + esc(d.txt) + '</small></span><span class="pill ' + esc(t.priority) + '">' + esc(PRIO_NAME[t.priority] || "Quest") + "</span>";
+        div.innerHTML = '<button class="chk" type="button" aria-label="Complete quest: ' + esc(t.content) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 7"/></svg></button>' +
+          '<button class="c" type="button" aria-expanded="false" title="' + esc(t.content) + '"><span class="ttl">' + esc(t.content) + '</span><span class="meta"><span class="tier">' + esc(PRIO_NAME[t.priority] || "Quest") + "</span>" + labels + esc(d.txt) + "</span></button>" +
+          '<span class="due ' + sd.cls + '">' + esc(sd.txt) + "</span>";
         div.querySelector(".chk").addEventListener("click", (ev) => completeQuest(t, div, ev));
+        const c = div.querySelector(".c");
+        c.addEventListener("click", () => { const open = div.classList.toggle("open"); c.setAttribute("aria-expanded", String(open)); updateQuestFade(); });
         ql.appendChild(div);
       });
       body.appendChild(wrap);
     });
+    body.scrollTop = keepScroll; updateQuestFade();
   }
   async function completeQuest(t, div, ev) {
     if (div.classList.contains("done")) return;
