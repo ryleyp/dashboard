@@ -4,8 +4,8 @@
 
   /* ---------- Constants ---------- */
   const XP_BY_PRIO = { p1: 50, p2: 30, p3: 20, p4: 10 };
-  const PRIO_NAME = { p1: "Boss Fight", p2: "Epic Quest", p3: "Quest", p4: "Side Quest" };
-  const RANKS = ["Wanderer", "Squire", "Adventurer", "Knight", "Ranger Captain", "Guildmaster", "Archmage", "Dragon Tamer", "Living Legend"];
+  const PRIO_NAME = { p1: "Province Boss", p2: "Borough Boss", p3: "Neighborhood Boss", p4: "Mob" };
+  const RANKS = ["Crawler", "Survivor", "Floor Clearer", "Boss Slayer", "Club Regular", "Celebrity Crawler", "Royal Court", "Dungeon Legend", "Final Boss"];
   const PALETTE = ["#18af7c", "#1f5f8b", "#b48a1e", "#8a3b8f", "#c2562b", "#2a8f8f", "#7a5c2e", "#4b6cb7", "#a33a2a", "#5b8c3a", "#b05c8e", "#3d7a5c", "#8c6d1f", "#2e6f9f", "#6b4e9b", "#9a7b4f", "#2f8f6f", "#c07a2a", "#4a8fb0"];
   const ALMANAC_MATCH = /birthday|^events|partiful|movies|travel|holiday/i;
   const NI_MATCH = /\bNI\b/;
@@ -20,11 +20,11 @@
     { n: "Teams", u: "https://teams.microsoft.com" }
   ];
   const STOCK_OMENS = [
-    "The road is long but your boots are sturdy. Take the first engagement with a clear head and the rest will fall into step.\n\nOmen of the day: a raven circles twice, then lands on the gate. Something you have been waiting for arrives early.",
-    "The ledger is full, yet the guild has seen fuller. Clear one small quest before noon and the afternoon councils will feel lighter.\n\nOmen of the day: a coin found heads-up on the tavern floor. Luck favors the direct ask.",
-    "A quiet board is not an empty one. Use the still hours to sharpen the blade, which is to say, send the follow-up you have been postponing.\n\nOmen of the day: the hearth sparks blue. An old contact brings good news.",
-    "Councils cluster like crows on a fence today. Keep your notes short and your water close.\n\nOmen of the day: the compass needle trembles east. Say yes to the unexpected invitation.",
-    "The map shows mountains, but every mountain is a series of steps. Begin with the quest you dread most and let momentum carry the rest.\n\nOmen of the day: a cat crosses your path and sits. Patience is rewarded this afternoon."
+    "Welcome back, Crawler. The schedule is loaded, the quests are queued, and nobody has died yet. Keep it that way.\n\nNew Achievement: Showed Up. You opened the dashboard. The bar is low, and you cleared it.",
+    "Today's board has encounters in it. Encounters are just boss rooms with calendar invites. Bring water and a plan.\n\nNew Achievement: Hydration Check. You drank water before a meeting. The dungeon is quietly impressed.",
+    "Quests remain open. That is fine. Quests are meant to be cleared one at a time, preferably before someone follows up.\n\nNew Achievement: One Less Thing. You closed a quest nobody was watching. We were watching.",
+    "A quiet schedule is a trap, Crawler. Use the gap to clear the quest you have been avoiding since last floor.\n\nNew Achievement: Avoidance Ended. You did the thing. It took eleven minutes. You dreaded it for nine days.",
+    "The surface weather is whatever it is. Down here, the only forecast that matters is your inbox.\n\nNew Achievement: Inbox Adjacent. You got close to inbox zero. Close counts in horseshoes and dungeons."
   ];
 
   /* ---------- Helpers ---------- */
@@ -38,7 +38,15 @@
   const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage blocked */ } };
 
   let toastT = null;
-  function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 2600); }
+  function toast(msg, title) { const t = $("toast"); t.innerHTML = (title ? "<b>" + esc(title) + "</b>" : "") + esc(msg); t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), title ? 4200 : 2600); }
+  const ACHIEVEMENTS = [
+    ["Did The Thing", "You completed a quest. The dungeon is mildly impressed."],
+    ["Productive Crawler", "Look at you, clearing the board like it owes you money."],
+    ["Follow-Up Slayer", "One less thing for someone to follow up on. They will find another."],
+    ["Still Alive", "Another quest down. The crawl continues."],
+    ["Boss Room Cleared", "That one had been staring at you. Not anymore."],
+    ["Checkbox Enjoyer", "You pressed a button and felt something. We all did."]
+  ];
   function sparkleAt(x, y) {
     for (let i = 0; i < 6; i++) {
       const s = document.createElement("div"); s.className = "spark";
@@ -129,7 +137,7 @@
       if (remote && typeof remote === "object" && (remote.savedAt || 0) > (state.savedAt || 0)) {
         mergeState(remote); lsSet("atlas.state", state);
         renderHeader(); renderPortals(); renderDeeds(); renderOracleStored(); renderLegend(); syncCalendars();
-        $("deedsMsg").textContent = "Progress synced from your other devices.";
+        $("deedsMsg").textContent = "Progress synced from your other devices. Nice gear.";
       } else if (remote && (remote.savedAt || 0) < (state.savedAt || 0)) {
         driveSave();
       }
@@ -154,13 +162,13 @@
   function levelFor(xp) { let l = 0; while (xp >= 100 * (l + 1) * (l + 2) / 2) l++; return l; }
   function renderHeader() {
     const h = new Date().getHours();
-    const g = h < 5 ? "Burning the Midnight Oil" : h < 12 ? "Good Morrow" : h < 17 ? "Good Day" : h < 21 ? "Good Evening" : "The Stars Are Out";
-    $("greet").textContent = g + ", Guildmaster";
-    $("dateline").textContent = new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric", year: "numeric" }) + ". The map unrolls.";
+    const g = h < 5 ? "Still Awake" : h < 12 ? "Good Morning" : h < 17 ? "Good Afternoon" : h < 21 ? "Good Evening" : "Late Night Crawl";
+    $("greet").textContent = g + ", Crawler";
+    $("dateline").textContent = new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric", year: "numeric" }) + ". Floor " + (levelFor(state.xp) + 1) + ". The dungeon is open.";
     const lvl = levelFor(state.xp), base = 100 * lvl * (lvl + 1) / 2, next = 100 * (lvl + 1) * (lvl + 2) / 2;
     $("lvlnum").textContent = lvl + 1;
-    $("rank").textContent = "Level " + (lvl + 1) + " " + RANKS[Math.min(lvl, RANKS.length - 1)];
-    $("xpline").textContent = state.xp + " XP, " + (next - state.xp) + " to next rank";
+    $("rank").textContent = "Level " + (lvl + 1) + ": " + RANKS[Math.min(lvl, RANKS.length - 1)];
+    $("xpline").textContent = state.xp + " XP, " + (next - state.xp) + " to next level";
     $("xpfill").style.width = Math.round(100 * (state.xp - base) / (next - base)) + "%";
   }
 
@@ -182,13 +190,13 @@
       renderLegend(); syncCalendars();
       driveLoad();
     } catch (e) {
-      const msg = e.code === "expired" ? "Your Google session expired. Reconnect in the Keeper's Keys." : "Could not reach Google Calendar: " + e.message;
+      const msg = e.code === "expired" ? "Your Google session expired. Reconnect in the Crawler Menu." : "Could not reach Google Calendar: " + e.message;
       $("days").innerHTML = '<span class="warn">' + esc(msg) + "</span>";
     }
   }
   function renderLegend() {
     const g = $("calgrid"); g.innerHTML = "";
-    if (!calendars.length) { g.innerHTML = '<span class="note">' + (gConnected() ? "No calendars found." : "Connect Google in the Keeper's Keys to see your calendars.") + "</span>"; return; }
+    if (!calendars.length) { g.innerHTML = '<span class="note">' + (gConnected() ? "No calendars found." : "Connect Google in the Crawler Menu to see your calendars.") + "</span>"; return; }
     calendars.forEach((c) => {
       const l = document.createElement("label");
       l.innerHTML = '<input type="checkbox"><span class="swatch" style="background:' + esc(calColor[c.id]) + '"></span><span class="name" title="' + esc(c.name) + '">' + esc(c.name) + "</span>";
@@ -232,11 +240,11 @@
     const now = new Date();
     const next = all.find((x) => !x.allDay && x.start > now);
     const nu = $("nextup");
-    if (next) { const mins = Math.round((next.start - now) / 60000); const inTxt = mins < 60 ? mins + " min" : mins < 1440 ? Math.floor(mins / 60) + "h " + (mins % 60) + "m" : Math.round(mins / 1440) + " days"; nu.innerHTML = '<div class="nextup"><span class="hg">Next</span><span class="what">' + esc(next.e.summary || "(untitled)") + '</span><span class="in">in ' + esc(inTxt) + "</span></div>"; }
+    if (next) { const mins = Math.round((next.start - now) / 60000); const inTxt = mins < 60 ? mins + " min" : mins < 1440 ? Math.floor(mins / 60) + "h " + (mins % 60) + "m" : Math.round(mins / 1440) + " days"; nu.innerHTML = '<div class="nextup"><span class="hg">Next Encounter</span><span class="what">' + esc(next.e.summary || "(untitled)") + '</span><span class="in">T minus ' + esc(inTxt) + "</span></div>"; }
     else nu.innerHTML = "";
     const days = $("days"); days.innerHTML = "";
-    if (!gConnected()) { days.innerHTML = '<span class="note">Connect Google in the Keeper\'s Keys to fill the board.</span>'; return; }
-    if (!all.length) { days.innerHTML = '<span class="note">' + (calendars.some((c) => calEnabled(c.id)) ? "A quiet week. No engagements on the chosen calendars." : "No calendars chosen. Open the Map Legend above to pick some.") + "</span>"; return; }
+    if (!gConnected()) { days.innerHTML = '<span class="note">Connect Google in the Crawler Menu to load the schedule.</span>'; return; }
+    if (!all.length) { days.innerHTML = '<span class="note">' + (calendars.some((c) => calEnabled(c.id)) ? "A quiet week. No encounters on the chosen calendars." : "No calendars chosen. Open the Floor Map above to pick some.") + "</span>"; return; }
     const byDay = {}; all.forEach((x) => { const k = dkey(x.start); (byDay[k] = byDay[k] || []).push(x); });
     const base = new Date(); base.setHours(0, 0, 0, 0);
     for (let i = 0; i < 7; i++) {
@@ -259,15 +267,15 @@
 
   function renderAlmanac() {
     const el = $("alm");
-    if (!gConnected()) { el.innerHTML = '<span class="note">Connect Google to turn the pages.</span>'; return; }
+    if (!gConnected()) { el.innerHTML = '<span class="note">Connect Google to see upcoming celebrations.</span>'; return; }
     const rows = []; const t0 = new Date(); t0.setHours(0, 0, 0, 0);
     calendars.forEach((c) => { (almEvents[c.id] || []).forEach((e) => { const s = parseStart(e); if (isNaN(s.d)) return; rows.push({ e, cal: c, start: s.d }); }); });
     rows.sort((a, b) => a.start - b.start);
     el.innerHTML = "";
-    if (!rows.length) { el.innerHTML = '<span class="note">No feast days or festivities in the next sixty days.</span>'; return; }
+    if (!rows.length) { el.innerHTML = '<span class="note">Nothing to celebrate in the next sixty days. Rude.</span>'; return; }
     rows.slice(0, 12).forEach((r) => {
       const days = Math.round((new Date(r.start.getFullYear(), r.start.getMonth(), r.start.getDate()) - t0) / 86400000);
-      const kind = /birthday/i.test(r.cal.name) ? "Feast Day" : r.cal.name.replace(/\s*\/.*$/, "");
+      const kind = /birthday/i.test(r.cal.name) ? "Birthday" : r.cal.name.replace(/\s*\/.*$/, "");
       const inTxt = days === 0 ? "today" : days === 1 ? "tomorrow" : "in " + days + " days";
       const div = document.createElement("div"); div.className = "arow";
       div.innerHTML = '<span class="date">' + esc(r.start.toLocaleDateString([], { month: "short" })) + "<b>" + r.start.getDate() + '</b></span><span class="what" title="' + esc(r.e.summary || "") + '">' + esc(r.e.summary || "(untitled)") + "<small>" + esc(kind) + '</small></span><span class="in">' + esc(inTxt) + "</span>";
@@ -280,7 +288,7 @@
   async function td(path, opts) {
     if (!keys.tdtoken) throw Object.assign(new Error("No Todoist token"), { code: "no_token" });
     const r = await fetch(TODOIST + path, Object.assign({}, opts, { headers: Object.assign({ Authorization: "Bearer " + keys.tdtoken }, (opts && opts.headers) || {}) }));
-    if (r.status === 401 || r.status === 403) throw Object.assign(new Error("Todoist rejected the token. Check it in the Keeper's Keys."), { code: "auth" });
+    if (r.status === 401 || r.status === 403) throw Object.assign(new Error("Todoist rejected the token. Check it in the Crawler Menu."), { code: "auth" });
     if (!r.ok) throw Object.assign(new Error("Todoist answered " + r.status), { code: "http" });
     if (r.status === 204) return null;
     const text = await r.text(); return text ? JSON.parse(text) : null;
@@ -298,8 +306,8 @@
   }
   async function loadQuests() {
     clearTimeout(questTimer);
-    if (!keys.tdtoken) { $("qbody").innerHTML = '<span class="note">Add your Todoist token in the Keeper\'s Keys to unfurl the scroll.</span>'; return; }
-    if (!keys.tdproject) { await loadProjects(); if (!keys.tdproject) { $("qbody").innerHTML = '<span class="note">Choose a project in the Keeper\'s Keys.</span>'; return; } }
+    if (!keys.tdtoken) { $("qbody").innerHTML = '<span class="note">Add your Todoist token in the Crawler Menu to load your quests.</span>'; return; }
+    if (!keys.tdproject) { await loadProjects(); if (!keys.tdproject) { $("qbody").innerHTML = '<span class="note">Choose a project in the Crawler Menu.</span>'; return; } }
     try {
       const [sj, tj] = await Promise.all([td("/sections?project_id=" + encodeURIComponent(keys.tdproject) + "&limit=200"), td("/tasks?project_id=" + encodeURIComponent(keys.tdproject) + "&limit=200")]);
       sections = {}; listOf(sj).forEach((s) => sections[s.id] = { name: s.name, order: s.section_order ?? s.order ?? 0 });
@@ -326,7 +334,7 @@
   }
   function renderQuests() {
     const body = $("qbody"); body.innerHTML = "";
-    if (!tasks.length) { body.innerHTML = '<span class="note">The quest board is clear. Rest, adventurer.</span>'; return; }
+    if (!tasks.length) { body.innerHTML = '<span class="note">No active quests. Suspicious, but enjoy it.</span>'; return; }
     const urgent = tasks.filter((t) => { const d = dueInfo(t); return d.over || d.today; });
     const groups = []; if (urgent.length) groups.push({ name: "Urgent Quests", list: urgent });
     const bySec = {}; tasks.filter((t) => !urgent.includes(t)).forEach((t) => { const k = t.sectionId || "_"; (bySec[k] = bySec[k] || []).push(t); });
@@ -357,9 +365,10 @@
       state.log.unshift({ t: Date.now(), w: t.content, xp: gain }); state.log = state.log.slice(0, 40);
       save(); renderHeader(); renderDeeds();
       sparkleAt(ev.clientX || window.innerWidth / 2, ev.clientY || window.innerHeight / 2);
-      toast(levelFor(state.xp) > before ? "Rank up! You are now a " + RANKS[Math.min(levelFor(state.xp), RANKS.length - 1)] : "+" + gain + " XP. Quest complete.");
+      if (levelFor(state.xp) > before) toast("You are now Level " + (levelFor(state.xp) + 1) + ": " + RANKS[Math.min(levelFor(state.xp), RANKS.length - 1)] + ". Stat points not included.", "Level Up!");
+      else { const a = ACHIEVEMENTS[(state.log.length + gain) % ACHIEVEMENTS.length]; toast(a[1] + " +" + gain + " XP.", "New Achievement! " + a[0]); }
       tasks = tasks.filter((x) => x.id !== t.id); setTimeout(renderQuests, 500);
-    } catch (e) { div.classList.remove("done"); btn.disabled = false; toast("Could not complete it in Todoist."); $("questMsg").innerHTML = '<p class="warn" style="margin:8px 0 0">' + esc(e.message) + "</p>"; }
+    } catch (e) { div.classList.remove("done"); btn.disabled = false; toast("Todoist refused. The quest stays open."); $("questMsg").innerHTML = '<p class="warn" style="margin:8px 0 0">' + esc(e.message) + "</p>"; }
   }
 
   /* ---------- Oracle ---------- */
@@ -368,11 +377,11 @@
     const evs = []; calendars.forEach((c) => { if (!calEnabled(c.id)) return; (calEvents[c.id] || []).forEach((e) => { const s = parseStart(e); if (dkey(s.d) === todayKey()) evs.push((s.allDay ? "all day" : fmtTime(s.d)) + ": " + (e.summary || "untitled") + " (" + c.name + ")"); }); });
     const qs = tasks.slice().sort((a, b) => dueInfo(a).ts - dueInfo(b).ts).slice(0, 8).map((t) => t.content + (dueInfo(t).txt ? " [" + dueInfo(t).txt + "]" : ""));
     const wx = lastWeather ? ("Weather: " + lastWeather.desc + ", " + lastWeather.temp + " degrees.") : "";
-    return "You are the Oracle of an adventure-map dashboard belonging to a customer success manager who works in software sales. Write her a short daily reading in the voice of a warm, slightly dramatic fantasy bard. Be encouraging and specific to the items below. Refer to meetings as engagements or councils and tasks as quests. Keep it under 130 words, in two short paragraphs, plain prose, no headings, no bullet points, no emoji, and never use an em dash. End with one playful omen for the day.\n\nToday's engagements:\n" + (evs.length ? evs.join("\n") : "none on the board") + "\n\nOpen quests:\n" + (qs.length ? qs.join("\n") : "none") + "\n\n" + wx + "\nCurrent rank: " + $("rank").textContent + ". Day streak: " + streakCount() + ".";
+    return "You are the Announcer for a dungeon-crawl style productivity dashboard belonging to a customer success manager who works in software sales. Write her a short daily briefing in the voice of a sardonic game-show AI announcer who pretends not to care but is clearly rooting for her. Call her Crawler. Refer to meetings as encounters or boss rooms and tasks as quests. Be specific to the items below. Keep it under 130 words, in two short paragraphs, plain prose, no headings, no bullet points, no emoji, and never use an em dash. End with one invented, mildly ridiculous achievement she could earn today, formatted as: New Achievement: <name>. <one sentence>.\n\nToday's encounters:\n" + (evs.length ? evs.join("\n") : "none on the schedule") + "\n\nActive quests:\n" + (qs.length ? qs.join("\n") : "none") + "\n\n" + wx + "\nCurrent level: " + $("rank").textContent + ". Days survived in a row: " + streakCount() + ".";
   }
-  function renderOracleStored() { if (state.oracle.date === todayKey() && state.oracle.text) { $("reading").textContent = state.oracle.text; $("askOracle").textContent = "Seek a New Reading"; } }
+  function renderOracleStored() { if (state.oracle.date === todayKey() && state.oracle.text) { $("reading").textContent = state.oracle.text; $("askOracle").textContent = "Run It Again"; } }
   async function consultOracle() {
-    const btn = $("askOracle"); btn.disabled = true; $("oracleMsg").textContent = "The Oracle gazes into the mist...";
+    const btn = $("askOracle"); btn.disabled = true; $("oracleMsg").textContent = "The Announcer clears its throat...";
     try {
       let text;
       if (keys.akey) {
@@ -382,15 +391,15 @@
           body: JSON.stringify({ model: keys.amodel || "claude-opus-5-5", max_tokens: 1024, fallbacks: "default", output_config: { effort: "low" }, messages: [{ role: "user", content: buildOraclePrompt() }] })
         });
         const j = await r.json();
-        if (!r.ok) throw new Error((j.error && j.error.message) || ("The Oracle's line answered " + r.status));
-        if (j.stop_reason === "refusal") throw new Error("The Oracle declined to speak on this.");
+        if (!r.ok) throw new Error((j.error && j.error.message) || ("The Announcer's line answered " + r.status));
+        if (j.stop_reason === "refusal") throw new Error("The Announcer declined to comment.");
         text = (j.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
       } else {
         const seed = Number(todayKey().replace(/-/g, "")) + (state.oracle.text ? 1 : 0);
         text = STOCK_OMENS[seed % STOCK_OMENS.length];
       }
-      state.oracle = { date: todayKey(), text }; $("reading").textContent = text; save(); $("oracleMsg").textContent = keys.akey ? "" : "A stock omen. Add an Anthropic key in the Keeper's Keys for a live reading."; btn.textContent = "Seek a New Reading";
-    } catch (e) { $("oracleMsg").textContent = "The mist would not clear. " + e.message; }
+      state.oracle = { date: todayKey(), text }; $("reading").textContent = text; save(); $("oracleMsg").textContent = keys.akey ? "" : "A canned line. Add an Anthropic key in the Crawler Menu for a live briefing."; btn.textContent = "Run It Again";
+    } catch (e) { $("oracleMsg").textContent = "Technical difficulties. " + e.message; }
     btn.disabled = false;
   }
   $("askOracle").addEventListener("click", consultOracle);
@@ -398,11 +407,11 @@
   /* ---------- Scrying pool: weather, moon, sun ---------- */
   let lastWeather = null, wxTimer = null;
   const WX_CODES = { 0: ["Clear skies", "☀️"], 1: ["Mostly clear", "🌤️"], 2: ["Partly cloudy", "⛅"], 3: ["Overcast", "☁️"], 45: ["Fog over the realm", "🌫️"], 48: ["Rime fog", "🌫️"], 51: ["Light drizzle", "🌦️"], 53: ["Drizzle", "🌦️"], 55: ["Heavy drizzle", "🌧️"], 61: ["Light rain", "🌧️"], 63: ["Rain", "🌧️"], 65: ["Heavy rain", "🌧️"], 66: ["Freezing rain", "🌨️"], 67: ["Freezing rain", "🌨️"], 71: ["Light snow", "🌨️"], 73: ["Snow", "❄️"], 75: ["Heavy snow", "❄️"], 77: ["Snow grains", "🌨️"], 80: ["Rain showers", "🌦️"], 81: ["Rain showers", "🌧️"], 82: ["Violent showers", "⛈️"], 85: ["Snow showers", "🌨️"], 86: ["Snow showers", "❄️"], 95: ["Thunderstorm", "⛈️"], 96: ["Thunderstorm with hail", "⛈️"], 99: ["Thunderstorm with hail", "⛈️"] };
-  const FLAVOR = { 0: "The sky is a clean blue shield.", 1: "A fine day for the road.", 2: "Clouds wander like sheep.", 3: "A grey cloak lies over the land.", 45: "Keep to the path; the mist hides the markers.", 48: "Keep to the path; the mist hides the markers.", 51: "A soft drizzle. Bring a hood.", 53: "A soft drizzle. Bring a hood.", 55: "Steady drizzle. The roads will be muddy.", 61: "Rain on the roof, good for reading.", 63: "The rain means it today. Cloak up.", 65: "The heavens are emptying. Stay by the hearth if you can.", 71: "A dusting of snow on the battlements.", 73: "Snow falls. The realm goes quiet.", 75: "A proper blizzard. Guard the gates.", 80: "Showers come and go. Expect both.", 81: "Showers come and go. Expect both.", 82: "Violent showers. Postpone the expedition.", 95: "Thunder over the hills. The dragons are restless.", 96: "Thunder and hail. Stay indoors.", 99: "Thunder and hail. Stay indoors." };
+  const FLAVOR = { 0: "Clear skies topside. Suspiciously nice.", 1: "A fine day on the surface, if you still go up there.", 2: "Some clouds. Nothing a crawler cannot handle.", 3: "Overcast. The surface is in a mood.", 45: "Fog. Visibility is terrible, which is on brand for the dungeon.", 48: "Fog. Visibility is terrible, which is on brand for the dungeon.", 51: "Light drizzle. Bring a hood or accept your fate.", 53: "Light drizzle. Bring a hood or accept your fate.", 55: "Steady drizzle. The ground is going to be gross.", 61: "Rain. Good day to stay on this floor.", 63: "Real rain. Cloak up, Crawler.", 65: "Heavy rain. The surface is leaking. Stay in.", 71: "A dusting of snow. Pretty, briefly.", 73: "Snow. The surface goes quiet.", 75: "Blizzard. Nobody is leaving the dungeon today.", 80: "Showers on and off. Plan for both.", 81: "Showers on and off. Plan for both.", 82: "Violent showers. Postpone the expedition.", 95: "Thunderstorm. Something large is angry up there.", 96: "Thunder and hail. Do not go up.", 99: "Thunder and hail. Do not go up." };
   async function loadWeather() {
     clearTimeout(wxTimer);
     const { lat, lon, name } = keys.loc;
-    $("poolSub").textContent = "Skies over " + (name || "the realm");
+    $("poolSub").textContent = "Conditions topside in " + (name || "your area");
     try {
       const u = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon + "&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=4";
       const r = await fetch(u); if (!r.ok) throw new Error("The pool answered " + r.status);
@@ -418,7 +427,7 @@
         el.innerHTML = "<b>" + (i === 0 ? "Today" : dt.toLocaleDateString([], { weekday: "short" })) + "</b><i>" + cc[1] + "</i><span>" + Math.round(d.temperature_2m_max[i]) + "° / " + Math.round(d.temperature_2m_min[i]) + "°</span><span>" + (d.precipitation_probability_max[i] ?? 0) + "% rain</span>";
         f.appendChild(el);
       });
-    } catch (e) { $("wx").innerHTML = '<span class="warn">The pool is clouded. ' + esc(e.message) + "</span>"; }
+    } catch (e) { $("wx").innerHTML = '<span class="warn">Surface feed unavailable. ' + esc(e.message) + "</span>"; }
     wxTimer = setTimeout(loadWeather, 30 * 60 * 1000);
   }
   function moonPhase(d) { const synodic = 29.530588853; const ref = Date.UTC(2000, 0, 6, 18, 14); let p = ((d.getTime() - ref) / 86400000 % synodic) / synodic; if (p < 0) p += 1; return p; }
@@ -454,7 +463,7 @@
       g.appendChild(a);
     });
   }
-  $("addportal").addEventListener("submit", (ev) => { ev.preventDefault(); const n = $("pname").value.trim(), u = $("purl").value.trim(); if (!n || !u) return; state.bookmarks.push({ n, u }); $("pname").value = ""; $("purl").value = ""; save(); renderPortals(); toast("A new portal opens."); });
+  $("addportal").addEventListener("submit", (ev) => { ev.preventDefault(); const n = $("pname").value.trim(), u = $("purl").value.trim(); if (!n || !u) return; state.bookmarks.push({ n, u }); $("pname").value = ""; $("purl").value = ""; save(); renderPortals(); toast("Stairwell added. Mind the step."); });
 
   /* ---------- Deeds ---------- */
   function renderDeeds() {
@@ -463,11 +472,11 @@
     const w = $("week"); w.innerHTML = ""; const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - 13);
     for (let i = 0; i < 14; i++) { const k = dkey(d); const c = state.completions[k] || 0; const i2 = document.createElement("i"); i2.className = (c ? "on" : "") + (k === todayKey() ? " today" : ""); i2.title = d.toLocaleDateString([], { month: "short", day: "numeric" }) + ": " + c + " quest" + (c === 1 ? "" : "s"); w.appendChild(i2); d.setDate(d.getDate() + 1); }
     const log = $("deedlog"); log.innerHTML = "";
-    if (!state.log.length) { log.innerHTML = '<li class="note">No deeds recorded yet. Complete a quest to begin the chronicle.</li>'; return; }
+    if (!state.log.length) { log.innerHTML = '<li class="note">No achievements yet. Clear a quest and the Announcer will notice.</li>'; return; }
     state.log.slice(0, 8).forEach((e) => { const li = document.createElement("li"); li.innerHTML = "<span>" + esc(new Date(e.t).toLocaleDateString([], { month: "short", day: "numeric" })) + '</span><span class="what">' + esc(e.w) + "</span><b>+" + e.xp + " XP</b>"; log.appendChild(li); });
   }
 
-  /* ---------- Keeper's Keys (settings) ---------- */
+  /* ---------- Crawler Menu (settings) ---------- */
   function openKeys() {
     $("gclient").value = keys.gclient || ""; $("tdtoken").value = keys.tdtoken || ""; $("akey").value = keys.akey || ""; $("amodel").value = keys.amodel || "claude-opus-5-5";
     $("city").value = keys.loc.name || ""; $("cityResult").textContent = keys.loc.name ? "Current: " + keys.loc.name + " (" + keys.loc.lat + ", " + keys.loc.lon + ")" : "";
@@ -484,20 +493,20 @@
   $("gconnect").addEventListener("click", () => { keys.gclient = $("gclient").value.trim(); lsSet("atlas.keys", keys); tokenClient = null; gConnect(true); });
   $("gdisconnect").addEventListener("click", gDisconnect);
   $("findCity").addEventListener("click", async () => {
-    const q = $("city").value.trim(); if (!q) return; $("cityResult").textContent = "Searching the maps...";
+    const q = $("city").value.trim(); if (!q) return; $("cityResult").textContent = "Searching...";
     try {
       const r = await fetch("https://geocoding-api.open-meteo.com/v1/search?name=" + encodeURIComponent(q) + "&count=1&language=en&format=json");
       const j = await r.json(); const hit = j.results && j.results[0];
-      if (!hit) { $("cityResult").textContent = "No such place on the map. Try a larger town nearby."; return; }
+      if (!hit) { $("cityResult").textContent = "No such place. Try a larger town nearby."; return; }
       keys.loc = { lat: Math.round(hit.latitude * 100) / 100, lon: Math.round(hit.longitude * 100) / 100, name: hit.name + (hit.admin1 ? ", " + hit.admin1 : "") };
       lsSet("atlas.keys", keys); $("cityResult").textContent = "Found: " + keys.loc.name + " (" + keys.loc.lat + ", " + keys.loc.lon + ")";
       loadWeather(); renderSky();
-    } catch (e) { $("cityResult").textContent = "The maps are unreadable right now."; }
+    } catch (e) { $("cityResult").textContent = "Could not search right now."; }
   });
   $("saveKeys").addEventListener("click", () => {
     keys.gclient = $("gclient").value.trim(); keys.tdtoken = $("tdtoken").value.trim(); keys.akey = $("akey").value.trim(); keys.amodel = $("amodel").value.trim() || "claude-opus-5-5";
     const sel = $("tdproject"); if (sel.value) { keys.tdproject = sel.value; const o = sel.options[sel.selectedIndex]; $("questSub").textContent = (o ? o.textContent : "") + ", from Todoist"; }
-    lsSet("atlas.keys", keys); closeKeys(); toast("Keys kept safe.");
+    lsSet("atlas.keys", keys); closeKeys(); toast("Menu saved.");
     loadQuests(); if (keys.gclient && !gConnected()) gConnect(true);
   });
 
@@ -522,7 +531,7 @@
   loadWeather(); loadQuests();
   setInterval(() => { renderHeader(); renderTavern(); }, 60000);
   if (!keys.gclient && !keys.tdtoken) {
-    banner("<b>Welcome, Guildmaster</b>This atlas needs its keys. Open the Keeper's Keys (the key button in the header) to connect Google Calendar and Todoist. The README in the repository walks through each step.<br><button class=\"primary\" type=\"button\" id=\"bannerKeys\">Open the Keeper's Keys</button>");
+    banner("<b>System Message</b>Welcome, Crawler. Before the crawl begins, open the Crawler Menu (the key button in the header) to connect Google Calendar and Todoist. The README in the repository walks through each step.<br><button class=\"primary\" type=\"button\" id=\"bannerKeys\">Open the Crawler Menu</button>");
     $("bannerKeys").addEventListener("click", openKeys);
   }
   // Google: resume a stored token, or ask silently if we connected before.
@@ -532,7 +541,7 @@
     if (!gReady()) { if (attempt < 40) setTimeout(() => bootGoogle(attempt + 1), 250); return; }
     if (lsGet("atlas.gwas")) {
       makeTokenClient();
-      banner("<b>Google Calendar</b>Your Google session needs a fresh sign-in to show the Tavern Board and Almanac.<br><button class=\"primary\" type=\"button\" id=\"bannerG\">Reconnect Google</button>");
+      banner("<b>Google Calendar</b>Your Google session needs a fresh sign-in to show the Schedule and Celebrations.<br><button class=\"primary\" type=\"button\" id=\"bannerG\">Reconnect Google</button>");
       $("bannerG").addEventListener("click", () => gConnect(false));
       try { tokenClient.requestAccessToken({ prompt: "" }); } catch (e) { /* popup likely blocked; the banner button remains */ }
     }
