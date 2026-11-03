@@ -1,6 +1,6 @@
 # Ryley's Dungeon
 
-A lightly dungeon-crawl themed personal dashboard that runs as a static web app. It shows your Google Calendar (the Schedule), your Todoist work tasks (the Quest Log), a daily AI briefing with commentary (the Announcer), live weather with moon and sun data (the Surface Report), upcoming birthdays and events (Celebrations), bookmarks (Stairwells), and XP, streaks, and achievement pop-ups for cleared quests (Achievements).
+A Dungeon Crawler Carl inspired personal dashboard that runs as a static web app. It shows your Google Calendar (the Schedule), your Todoist work tasks (the Quest Log), a daily AI briefing with commentary (the Announcer), live weather with moon and sun data (the Surface Report), upcoming birthdays and events (Celebrations), bookmarks (Stairwells), and XP, streaks, and achievement pop-ups for cleared quests (Achievements).
 
 Everything runs in your browser. There is no server. API keys stay on each device, and your progress syncs between devices through a private file in your own Google Drive.
 
@@ -20,9 +20,13 @@ Open the site, then click the key button in the header to open the **Crawler Men
 1. In Todoist, open **Settings**, then **Integrations**, then the **Developer** tab.
 2. Copy your **API token** and paste it into the Crawler Menu.
 3. Pick the project you want to show. Work Tasks is selected by default if it exists.
-4. Click **Save Keys**.
+4. Click **Save Settings**.
 
-Completing a quest in the dashboard completes it in Todoist and awards XP. Province Bosses (priority 1) are worth 50 XP, Borough Bosses 30, Neighborhood Bosses 20, and Mobs 10.
+Completing a quest in the dashboard completes it in Todoist. Confirmed completions in the selected project earn XP whether you finish them here or directly in Todoist. Province Bosses (priority 1) are worth 50 XP, Borough Bosses 30, Neighborhood Bosses 20, and Mobs 10.
+
+XP tracking begins when you first open this version of the dashboard. Existing XP is preserved; earlier Todoist history is not backfilled because older dashboard completions have no task IDs for reliable duplicate detection. History is checked on launch, every five minutes while open, when returning to the tab, and with **Refresh quests**. Completion timestamps determine the activity day and streak, and recurring completions get separate credit. Deleted or moved tasks do not earn XP merely by disappearing from the list.
+
+Dashboard completions use the same confirmed history as external completions. If Todoist delays or rejects a history request, the quest can still close successfully and XP stays pending until a successful refresh. History is paginated and long absences are split into 30-day requests. A durable completion ledger prevents duplicate XP on refresh or reload and is merged when loading progress from Drive. Google Drive remains a best-effort sync; keep the dashboard current on each device.
 
 ### 2. Google Calendar (the Schedule, Celebrations, and cross-device sync)
 
@@ -52,6 +56,12 @@ The key is stored only in this browser and is sent directly from your browser to
 
 In the Crawler Menu, type your city and click **Find**. Weather comes from Open-Meteo and needs no key.
 
+## Appearance and settings export
+
+In the **Crawler Menu**, choose **Dungeon** (dark), **Surface** (light), or **Follow device**. The default **Compact command center** uses a denser desktop grid; **Comfortable** keeps the roomier layout. Both the Schedule and Quest Log have small, independently scrollable content boxes: 220 pixels high on desktop and 200 pixels on mobile. They support keyboard scrolling, and expanded quest details stay inside the box. Mobile retains a single column. Appearance is saved per browser when you click **Save Settings**.
+
+**Export settings JSON** downloads the current menu values, appearance, resolved weather location, bookmarks, and calendar choices in a versioned JSON file. API keys are excluded by default. The optional **Include Todoist and Anthropic API keys** checkbox includes those secrets in plain text; keep that file private. Google access tokens and XP history are never exported. This is an export for inspection or backup, with no import flow yet. To change the exported location, use **Find** to resolve the city first.
+
 ## Putting It on Your Phone
 
 - **iPhone (Safari):** open the site, tap the Share button, then **Add to Home Screen**.
@@ -73,6 +83,20 @@ Then open `http://localhost:8080/`. Remember to add that origin to your Google O
 
 - `index.html` is the page.
 - `atlas.css` is the styling: a dark dungeon theme by default, with a lighter surface theme when your device prefers light mode.
-- `atlas.js` holds all app logic and API calls.
+- `atlas.js` holds UI logic and API calls.
+- `dashboard-data.js` handles settings exports, completion-history pagination, and XP ledger accounting.
 - `manifest.webmanifest` and `sw.js` make it installable as a home-screen app.
 - `icons/` holds the app icons.
+
+## Validation
+
+No build step or package installation is required. With Node.js 22 or later:
+
+```sh
+node --check atlas.js
+node --check dashboard-data.js
+node --check sw.js
+node --test tests/*.test.js
+```
+
+The tests cover external completion credit, duplicate history, recurring tasks, priority mapping, legacy migration, device-ledger merges, pagination, failed requests, and secret exclusion. Pull requests run these checks in GitHub Actions. Browser checks should exercise both themes, desktop/mobile widths, settings downloads, and scrolling/expanding long quest lists. Completion-history behavior follows the [Todoist API documentation](https://developer.todoist.com/api/v1/#tag/Tasks/operation/get_completed_tasks_by_completion_date_api_v1_tasks_completed_by_completion_date_get).

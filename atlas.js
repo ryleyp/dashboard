@@ -3,7 +3,6 @@
   "use strict";
 
   /* ---------- Constants ---------- */
-  const XP_BY_PRIO = { p1: 50, p2: 30, p3: 20, p4: 10 };
   const PRIO_NAME = { p1: "Province Boss", p2: "Borough Boss", p3: "Neighborhood Boss", p4: "Mob" };
   const RANKS = ["Crawler", "Survivor", "Floor Clearer", "Boss Slayer", "Club Regular", "Celebrity Crawler", "Royal Court", "Dungeon Legend", "Final Boss"];
   const PALETTE = ["#18af7c", "#1f5f8b", "#b48a1e", "#8a3b8f", "#c2562b", "#2a8f8f", "#7a5c2e", "#4b6cb7", "#a33a2a", "#5b8c3a", "#b05c8e", "#3d7a5c", "#8c6d1f", "#2e6f9f", "#6b4e9b", "#9a7b4f", "#2f8f6f", "#c07a2a", "#4a8fb0"];
@@ -69,6 +68,18 @@
     if (!state.oracle) state.oracle = { date: "", text: "" };
   }
   mergeState(lsGet("atlas.state"));
+  DashboardData.initProgress(state);
+  lsSet("atlas.state", state);
+  let prefs = DashboardData.preferences(lsGet("atlas.preferences") || {});
+  function applyAppearance() {
+    document.documentElement.dataset.theme = prefs.theme;
+    document.documentElement.dataset.density = prefs.density;
+    const dark = prefs.theme === "dark" || (prefs.theme === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+    document.querySelector('meta[name="theme-color"]').content = dark ? "#0b0d14" : "#e9e4d8";
+    updateQuestFade();
+  }
+  applyAppearance();
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyAppearance);
 
   let saveTimer = null;
   function save() {
@@ -92,7 +103,7 @@
         if (resp && resp.access_token) {
           gToken = { token: resp.access_token, exp: Date.now() + (Number(resp.expires_in || 3600) - 60) * 1000 };
           lsSet("atlas.gtoken", gToken); lsSet("atlas.gwas", true);
-          renderGStatus(); banner(""); startGoogle();
+          renderGStatus(); banner(""); progressReady = driveLoad(); startGoogle();
         } else { renderGStatus(); }
       },
       error_callback: (err) => { renderGStatus(); if (err && err.type !== "popup_closed") toast("Google sign-in did not complete: " + (err.type || "error")); }
@@ -134,12 +145,11 @@
       if (!f) return;
       driveFileId = f.id;
       const remote = await gFetch("https://www.googleapis.com/drive/v3/files/" + f.id + "?alt=media");
-      if (remote && typeof remote === "object" && (remote.savedAt || 0) > (state.savedAt || 0)) {
-        mergeState(remote); lsSet("atlas.state", state);
+      if (remote && typeof remote === "object") {
+        mergeState(DashboardData.mergeProgress(state, remote)); lsSet("atlas.state", state);
         renderHeader(); renderPortals(); renderDeeds(); renderOracleStored(); renderLegend(); syncCalendars();
         $("deedsMsg").textContent = "Progress synced from your other devices. Nice gear.";
-      } else if (remote && (remote.savedAt || 0) < (state.savedAt || 0)) {
-        driveSave();
+        await driveSave();
       }
     } catch (e) { if (e.code !== "no_token") $("deedsMsg").textContent = "Could not sync progress through Google Drive. It is kept on this device."; }
   }
@@ -188,7 +198,6 @@
       calendars.sort((a, b) => a.name.localeCompare(b.name));
       calendars.forEach((c, i) => calColor[c.id] = c.color || PALETTE[i % PALETTE.length]);
       renderLegend(); syncCalendars();
-      driveLoad();
     } catch (e) {
       const msg = e.code === "expired" ? "Your Google session expired. Reconnect in the Crawler Menu." : "Could not reach Google Calendar: " + e.message;
       $("days").innerHTML = '<span class="warn">' + esc(msg) + "</span>";
@@ -284,7 +293,8 @@
   }
 
   /* ---------- Todoist ---------- */
-  let tasks = [], sections = {}, questTimer = null;
+  let tasks = [], sections = {}, questTimer = null, questLoad = null;
+  let progressReady = Promise.resolve();
   async function td(path, opts) {
     if (!keys.tdtoken) throw Object.assign(new Error("No Todoist token"), { code: "no_token" });
     const r = await fetch(TODOIST + path, Object.assign({}, opts, { headers: Object.assign({ Authorization: "Bearer " + keys.tdtoken }, (opts && opts.headers) || {}) }));
@@ -304,20 +314,56 @@
       const chosen = list.find((p) => String(p.id) === String(sel.value)); $("questSub").textContent = chosen ? chosen.name + ", from Todoist" : "From Todoist";
     } catch (e) { sel.innerHTML = '<option value="">' + esc(e.message) + "</option>"; }
   }
-  async function loadQuests() {
+  function loadQuests() {
+    if (questLoad) return questLoad;
+    questLoad = refreshQuests().finally(() => { questLoad = null; });
+    return questLoad;
+  }
+  async function refreshQuests() {
     clearTimeout(questTimer);
     if (!keys.tdtoken) { $("qbody").innerHTML = '<span class="note">Add your Todoist token in the Crawler Menu to load your quests.</span>'; return; }
     if (!keys.tdproject) { await loadProjects(); if (!keys.tdproject) { $("qbody").innerHTML = '<span class="note">Choose a project in the Crawler Menu.</span>'; return; } }
+    const project = keys.tdproject, token = keys.tdtoken;
     try {
       const [sj, tj] = await Promise.all([td("/sections?project_id=" + encodeURIComponent(keys.tdproject) + "&limit=200"), td("/tasks?project_id=" + encodeURIComponent(keys.tdproject) + "&limit=200")]);
       sections = {}; listOf(sj).forEach((s) => sections[s.id] = { name: s.name, order: s.section_order ?? s.order ?? 0 });
       let list = listOf(tj); let cursor = tj && tj.next_cursor; let guard = 0;
       while (cursor && guard++ < 3) { const more = await td("/tasks?project_id=" + encodeURIComponent(keys.tdproject) + "&limit=200&cursor=" + encodeURIComponent(cursor)); list = list.concat(listOf(more)); cursor = more && more.next_cursor; }
+      if (project !== keys.tdproject || token !== keys.tdtoken) { questTimer = setTimeout(loadQuests, 0); return; }
       tasks = list.filter((t) => !t.checked && !t.is_completed).map(normalizeTask);
       $("questMsg").innerHTML = ""; renderQuests();
+      await syncCompletedQuests(project, token);
     } catch (e) { $("questMsg").innerHTML = '<p class="warn" style="margin:8px 0 0">' + esc(e.message) + "</p>"; if (!tasks.length) $("qbody").innerHTML = ""; }
     questTimer = setTimeout(loadQuests, 5 * 60 * 1000);
   }
+  async function syncCompletedQuests(project = keys.tdproject, token = keys.tdtoken) {
+    await progressReady;
+    const until = Date.now();
+    // Overlap a day to tolerate delayed history visibility; ledger entries are durable.
+    const since = Math.max(state.todoistSync.startedAt, (state.todoistSync.projects[project] || state.todoistSync.startedAt) - 86400000);
+    try {
+      const items = await DashboardData.completedHistory(td, project, since, until);
+      if (project !== keys.tdproject || token !== keys.tdtoken) return;
+      const before = levelFor(state.xp);
+      const result = DashboardData.creditCompletions(state, items, project);
+      state.todoistSync.projects[project] = until;
+      save(); renderHeader(); renderDeeds();
+      $("questSync").textContent = "XP synced · " + fmtTime(new Date()) + ". Completions in Todoist count here too.";
+      if (result.count) {
+        const title = levelFor(state.xp) > before ? "Level Up!" : "New Achievement! " + ACHIEVEMENTS[state.log.length % ACHIEVEMENTS.length][0];
+        toast(result.count + " quest" + (result.count === 1 ? "" : "s") + " cleared. +" + result.xp + " XP. The dungeon saw that.", title);
+      }
+      return result;
+    } catch (e) {
+      $("questSync").textContent = "XP sync pending: " + e.message + ". We will retry on refresh.";
+      return null;
+    }
+  }
+  $("refreshQuests").addEventListener("click", async () => {
+    const button = $("refreshQuests"); button.disabled = true;
+    try { await loadQuests(); } finally { button.disabled = false; }
+  });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) loadQuests(); });
   function normalizeTask(t) {
     const p = Number(t.priority) || 1; // Todoist API: 4 is the most urgent
     const due = t.due || {};
@@ -379,16 +425,17 @@
   async function completeQuest(t, div, ev) {
     if (div.classList.contains("done")) return;
     div.classList.add("done"); const btn = div.querySelector(".chk"); btn.disabled = true;
+    const creditIds = new Set(Object.keys(state.questCredits));
     try {
       await td("/tasks/" + encodeURIComponent(t.id) + "/close", { method: "POST" });
-      const gain = XP_BY_PRIO[t.priority] || 10; const k = todayKey(); const before = levelFor(state.xp);
-      state.xp += gain; state.completions[k] = (state.completions[k] || 0) + 1;
-      state.log.unshift({ t: Date.now(), w: t.content, xp: gain }); state.log = state.log.slice(0, 40);
-      save(); renderHeader(); renderDeeds();
+      tasks = tasks.filter((x) => x.id !== t.id); renderQuests();
       sparkleAt(ev.clientX || window.innerWidth / 2, ev.clientY || window.innerHeight / 2);
-      if (levelFor(state.xp) > before) toast("You are now Level " + (levelFor(state.xp) + 1) + ": " + RANKS[Math.min(levelFor(state.xp), RANKS.length - 1)] + ". Stat points not included.", "Level Up!");
-      else { const a = ACHIEVEMENTS[(state.log.length + gain) % ACHIEVEMENTS.length]; toast(a[1] + " +" + gain + " XP.", "New Achievement! " + a[0]); }
-      tasks = tasks.filter((x) => x.id !== t.id); setTimeout(renderQuests, 500);
+      toast("Quest cleared. Checking Todoist for XP credit.");
+      // Both completion paths use the server's identity; delayed history is retried.
+      if (questLoad) await questLoad;
+      await loadQuests();
+      const credited = Object.keys(state.questCredits).some((id) => id.startsWith(t.id + ":") && !creditIds.has(id));
+      if (!credited) $("questSync").textContent = "Quest cleared. XP is pending Todoist completion history; refresh to check again.";
     } catch (e) { div.classList.remove("done"); btn.disabled = false; toast("Todoist refused. The quest stays open."); $("questMsg").innerHTML = '<p class="warn" style="margin:8px 0 0">' + esc(e.message) + "</p>"; }
   }
 
@@ -501,10 +548,11 @@
   function openKeys() {
     $("gclient").value = keys.gclient || ""; $("tdtoken").value = keys.tdtoken || ""; $("akey").value = keys.akey || ""; $("amodel").value = keys.amodel || "claude-opus-5-5";
     $("city").value = keys.loc.name || ""; $("cityResult").textContent = keys.loc.name ? "Current: " + keys.loc.name + " (" + keys.loc.lat + ", " + keys.loc.lon + ")" : "";
+    $("themeChoice").value = prefs.theme; $("densityChoice").value = prefs.density; $("exportSecrets").checked = false;
     renderGStatus(); if (keys.tdtoken) loadProjects();
     $("keys").hidden = false; $("gclient").focus();
   }
-  function closeKeys() { $("keys").hidden = true; }
+  function closeKeys() { $("keys").hidden = true; $("openKeys").focus(); }
   $("openKeys").addEventListener("click", openKeys);
   $("closeKeys").addEventListener("click", closeKeys);
   $("keys").addEventListener("click", (ev) => { if (ev.target === $("keys")) closeKeys(); });
@@ -524,10 +572,23 @@
       loadWeather(); renderSky();
     } catch (e) { $("cityResult").textContent = "Could not search right now."; }
   });
-  $("saveKeys").addEventListener("click", () => {
+  function readSettingsForm() {
+    return Object.assign({}, keys, { gclient: $("gclient").value.trim(), tdtoken: $("tdtoken").value.trim(), akey: $("akey").value.trim(), amodel: $("amodel").value.trim() || "claude-opus-5-5", tdproject: $("tdproject").value || keys.tdproject });
+  }
+  function readAppearanceForm() { return DashboardData.preferences({ theme: $("themeChoice").value, density: $("densityChoice").value }); }
+  $("exportSettings").addEventListener("click", () => {
+    const data = DashboardData.settingsExport(readSettingsForm(), readAppearanceForm(), state, $("exportSecrets").checked);
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2) + "\n"], { type: "application/json" }));
+    const link = document.createElement("a"); link.href = url; link.download = "ryleyp-dashboard-settings-" + todayKey() + ".json";
+    document.body.appendChild(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast("Settings JSON exported" + (data.includesSecrets ? ". Keep this file private: it contains API keys." : ". API keys were excluded."));
+  });
+  $("saveKeys").addEventListener("click", async () => {
+    prefs = readAppearanceForm(); lsSet("atlas.preferences", prefs); applyAppearance();
     keys.gclient = $("gclient").value.trim(); keys.tdtoken = $("tdtoken").value.trim(); keys.akey = $("akey").value.trim(); keys.amodel = $("amodel").value.trim() || "claude-opus-5-5";
     const sel = $("tdproject"); if (sel.value) { keys.tdproject = sel.value; const o = sel.options[sel.selectedIndex]; $("questSub").textContent = (o ? o.textContent : "") + ", from Todoist"; }
     lsSet("atlas.keys", keys); closeKeys(); toast("Menu saved.");
+    if (questLoad) await questLoad;
     loadQuests(); if (keys.gclient && !gConnected()) gConnect(true);
   });
 
@@ -549,6 +610,7 @@
 
   /* ---------- Boot ---------- */
   renderHeader(); renderPortals(); renderDeeds(); renderSky(); renderOracleStored(); renderGStatus();
+  if (gConnected()) progressReady = driveLoad();
   loadWeather(); loadQuests();
   setInterval(() => { renderHeader(); renderTavern(); }, 60000);
   if (!keys.gclient && !keys.tdtoken) {
