@@ -1,37 +1,37 @@
 /* Ryley's Dungeon: a lightly dungeon-crawl themed dashboard. Dark dungeon by default; "surface" light theme available. */
 :root{
-  --bg:#0b0f14;
-  --paper:#141b23;
-  --paper2:#0f151c;
+  --bg:#0b0d14;
+  --paper:#151923;
+  --paper2:#10131c;
   --ink:#e6e9ee;
   --muted:#93a0ad;
   --forest:#013324;
   --forest2:#18af7c;
-  --emerald:#18af7c;
+  --emerald:#60d6aa;
   --sea:#4fb3ff;
-  --gold:#f2c14e;
+  --gold:#ffca69;
   --gold2:#ffd97a;
-  --line:#273340;
+  --line:#303645;
   --danger:#ff6b5e;
   --glow:rgba(24,175,124,.25);
   --shadow:0 12px 32px rgba(0,0,0,.5);
   --display:"Orbitron","Segoe UI",Arial,sans-serif;
   --body:"Source Sans 3","Segoe UI",Arial,sans-serif;
-  --title:#f2c14e;
+  --title:#ffca69;
   --stone:rgba(255,255,255,.025);
   color-scheme:dark;
 }
 @media (prefers-color-scheme:light){
   :root:not([data-theme="dark"]){
     --bg:#e9e4d8; --paper:#f7f3ea; --paper2:#eee8db; --ink:#1b2028; --muted:#5d6774;
-    --forest:#013324; --forest2:#0a5a40; --emerald:#18af7c; --sea:#1f5f8b; --gold:#b48a1e; --gold2:#d9ab3a;
+    --forest:#013324; --forest2:#0a5a40; --emerald:#08734f; --sea:#1f5f8b; --gold:#876018; --gold2:#d9ab3a;
     --line:#cfc6b6; --danger:#b23a2c; --glow:rgba(24,175,124,.18); --shadow:0 10px 26px rgba(27,32,40,.15);
     --title:#013324; --stone:rgba(0,0,0,.035); color-scheme:light;
   }
 }
 :root[data-theme="light"]{
   --bg:#e9e4d8; --paper:#f7f3ea; --paper2:#eee8db; --ink:#1b2028; --muted:#5d6774;
-  --forest:#013324; --forest2:#0a5a40; --emerald:#18af7c; --sea:#1f5f8b; --gold:#b48a1e; --gold2:#d9ab3a;
+  --forest:#013324; --forest2:#0a5a40; --emerald:#08734f; --sea:#1f5f8b; --gold:#876018; --gold2:#d9ab3a;
   --line:#cfc6b6; --danger:#b23a2c; --glow:rgba(24,175,124,.18); --shadow:0 10px 26px rgba(27,32,40,.15);
   --title:#013324; --stone:rgba(0,0,0,.035); color-scheme:light;
 }
@@ -168,9 +168,9 @@ select{appearance:auto}
 
 /* Quests: condensed, scrollable */
 .qcount{font-family:var(--display);font-size:11px;letter-spacing:.06em;color:var(--gold);background:var(--paper2);border:1px solid var(--line);border-radius:2px;padding:1px 7px;font-variant-numeric:tabular-nums}
-.qscroll{max-height:min(380px,60vh);overflow-y:auto;overscroll-behavior:contain;margin-right:-8px;padding-right:8px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
-.qscroll::-webkit-scrollbar{width:6px}
-.qscroll::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+.days,.qscroll{height:220px;max-height:220px;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding-right:8px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.days::-webkit-scrollbar,.qscroll::-webkit-scrollbar{width:6px}
+.days::-webkit-scrollbar-thumb,.qscroll::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
 .qscroll:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .qscroll.more-below{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 36px),transparent)}
 .qgroup{margin-bottom:8px}
@@ -271,3 +271,63 @@ select{appearance:auto}
 .spark{position:fixed;width:18px;height:18px;pointer-events:none;z-index:40;color:var(--gold);animation:sparkle .7s ease-out forwards}
 @media (prefers-reduced-motion:reduce){.spark{animation:none;display:none}.xpbar i{transition:none}}
 [hidden]{display:none!important}
+
+/* DCC broadcast framing, with readable system messages in both themes. */
+.eyebrow{font-family:var(--display);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--emerald);margin-bottom:8px}
+.hero-text{min-width:0}
+.hero h1{font-size:clamp(22px,2.6vw,34px)}
+.region::before{background:linear-gradient(90deg,var(--gold),var(--emerald) 45%,transparent)}
+#oracle{border-left:3px solid var(--gold)}
+#oracle .rh h2,#deeds .rh h2{color:var(--gold)}
+.quest-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+.quest-tools .note{flex:1 1 180px;font-size:12px}
+.modal-card .checkline{display:flex;gap:10px;align-items:center;color:var(--ink)}
+.checkline input{width:auto;flex:none}
+.days:focus-visible,.qscroll:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+button:disabled{cursor:wait;opacity:.6}
+
+/* Compact mode changes desktop density only; panels remain in document order. */
+@media (min-width:1100px){
+  :root[data-density="compact"] .wrap{max-width:1600px;padding-block:16px 28px}
+  :root[data-density="compact"] .hero{gap:14px;padding-bottom:12px;margin-bottom:14px}
+  :root[data-density="compact"] .compass{width:60px;height:60px}
+  :root[data-density="compact"] .hero .sub{font-size:14px}
+  :root[data-density="compact"] .badge{padding:7px 10px}
+  :root[data-density="compact"] .badge .seal{width:40px;height:40px}
+  :root[data-density="compact"] .legend{margin-bottom:14px}
+  :root[data-density="compact"] .map{gap:14px}
+  :root[data-density="compact"] .region{padding:12px 14px 14px}
+  :root[data-density="compact"] #tavern,:root[data-density="compact"] #quests{grid-column:span 6}
+  :root[data-density="compact"] #oracle,:root[data-density="compact"] #pool,:root[data-density="compact"] #almanac{grid-column:span 4}
+  :root[data-density="compact"] #portals,:root[data-density="compact"] #deeds{grid-column:span 6}
+  :root[data-density="compact"] .rh{gap:6px;margin-bottom:7px}
+  :root[data-density="compact"] .rh h2{font-size:12px;letter-spacing:.08em}
+  :root[data-density="compact"] .rh .sub{font-size:13px}
+  :root[data-density="compact"] .day{grid-template-columns:70px minmax(0,1fr);gap:8px}
+  :root[data-density="compact"] .ev{padding:5px 7px;gap:7px;font-size:15px}
+  :root[data-density="compact"] .oracle p.reading{font-size:16px;line-height:1.45}
+  :root[data-density="compact"] .pool{grid-template-columns:64px 1fr;gap:10px}
+  :root[data-density="compact"] .moon{width:64px;height:64px}
+  :root[data-density="compact"] .portals{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  :root[data-density="compact"] .portal{flex-direction:row;padding:8px;gap:8px;text-align:left}
+  :root[data-density="compact"] .portal .seal{width:28px;height:28px;font-size:13px;flex:none}
+  :root[data-density="compact"] .portal .nm{padding-right:12px}
+  :root[data-density="compact"] .stat{padding:7px}
+  :root[data-density="compact"] .week i{aspect-ratio:auto;height:14px}
+  :root[data-density="compact"] .alm{max-height:270px;overflow:auto}
+}
+@media (max-width:700px){
+  .days,.qscroll{height:200px;max-height:200px}
+  .eyebrow{font-size:9px;letter-spacing:.1em}
+  .hero h1{font-size:24px}
+  .region{padding:14px}
+  .day{grid-template-columns:60px minmax(0,1fr);gap:8px}
+  .ev{grid-template-columns:3px 62px minmax(0,1fr);gap:6px;padding:6px}
+  .nextup{flex-wrap:wrap;gap:6px}
+  .nextup .what{white-space:normal;overflow-wrap:anywhere;flex:1 1 120px}
+  .q{grid-template-columns:32px minmax(0,1fr) auto;min-height:40px}
+  .q .chk{width:28px;height:28px}
+  .q .c{padding-block:6px}
+  .legend summary{font-size:10px;letter-spacing:.05em}
+}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}

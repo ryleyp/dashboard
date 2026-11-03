@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark" data-density="compact">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Ryley's Dungeon</title>
-<meta name="description" content="A lightly dungeon-crawl themed dashboard: schedule, quests, announcer, surface weather, celebrations, stairwells, and achievements.">
+<meta name="description" content="A Dungeon Crawler Carl inspired command center: schedule, quests, announcer, surface weather, celebrations, stairwells, and achievements.">
 <meta name="theme-color" content="#0b0f14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -15,6 +15,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<script>
+try {
+  const p = JSON.parse(localStorage.getItem("atlas.preferences") || "{}");
+  document.documentElement.dataset.theme = ["dark", "light", "system"].includes(p.theme) ? p.theme : "dark";
+  document.documentElement.dataset.density = p.density === "comfortable" ? "comfortable" : "compact";
+} catch (_) { /* Default dungeon appearance when storage is unavailable. */ }
+</script>
 <link rel="stylesheet" href="atlas.css">
 </head>
 <body>
@@ -23,19 +30,12 @@
 
 <header class="hero">
   <svg class="compass" viewBox="0 0 100 100" aria-hidden="true">
-    <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--gold)"/>
-    <circle cx="50" cy="50" r="38" fill="none" stroke="currentColor" stroke-width=".8" style="color:var(--line)"/>
-    <g style="color:var(--forest2)" fill="currentColor">
-      <polygon points="50,6 56,44 50,50 44,44"/><polygon points="50,94 56,56 50,50 44,56" opacity=".55"/>
-      <polygon points="6,50 44,44 50,50 44,56" opacity=".55"/><polygon points="94,50 56,44 50,50 56,56" opacity=".55"/>
-    </g>
-    <g style="color:var(--gold)" fill="currentColor" opacity=".8">
-      <polygon points="50,50 22,22 44,46"/><polygon points="50,50 78,22 56,46"/><polygon points="50,50 78,78 56,54"/><polygon points="50,50 22,78 44,54"/>
-    </g>
-    <circle cx="50" cy="50" r="4" style="fill:var(--gold)"/>
-    <text x="50" y="16" text-anchor="middle" font-family="Cinzel,serif" font-size="9" font-weight="700" style="fill:var(--forest2)">N</text>
+    <path d="M50 5 90 28v44L50 95 10 72V28Z" fill="var(--paper)" stroke="var(--gold)" stroke-width="2"/>
+    <path d="M28 70V31h12v10h20V31h12v39H59V56H41v14Z" fill="var(--emerald)"/>
+    <path d="M24 79h52M32 85h36" stroke="var(--gold)" stroke-width="2"/>
   </svg>
   <div class="hero-text">
+    <div class="eyebrow">World Dungeon · Crawler Command</div>
     <h1 id="greet">Welcome, Crawler</h1>
     <div class="sub" id="dateline">The dungeon is open.</div>
   </div>
@@ -85,7 +85,7 @@
     </div>
     <div class="rule"></div>
     <div id="nextup"></div>
-    <div class="days" id="days"><span class="note">Connect Google in the Crawler Menu to load the schedule.</span></div>
+    <div class="days" id="days" tabindex="0" aria-label="Seven-day schedule"><span class="note">Connect Google in the Crawler Menu to load the schedule.</span></div>
     <div id="tavernMsg"></div>
   </section>
 
@@ -97,6 +97,7 @@
     </div>
     <div class="rule"></div>
     <div id="qbody" class="qscroll" tabindex="0" aria-label="Quest list"><span class="note">Add your Todoist token in the Crawler Menu to load your quests.</span></div>
+    <div class="quest-tools"><span class="note" id="questSync" role="status">XP tracking starts on this dashboard's first visit.</span><button class="ghost" id="refreshQuests" type="button">Refresh quests</button></div>
     <div id="questMsg"></div>
   </section>
 
@@ -107,7 +108,7 @@
       <span class="sub">Your daily briefing, with commentary</span>
     </div>
     <div class="rule"></div>
-    <p class="reading" id="reading">The Announcer is waiting. Press the button and today's schedule and quests will be read aloud, with commentary you did not ask for.</p>
+    <p class="reading" id="reading">The System AI is watching. Cue your daily briefing for encounters, unfinished business, and an achievement you probably did not ask for.</p>
     <div class="row">
       <button class="primary" id="askOracle" type="button">Cue the Announcer</button>
       <span class="note" id="oracleMsg"></span>
@@ -190,6 +191,15 @@
     <p class="note" style="margin:0 0 14px">Keys are stored only in this browser. Set them once on each device. Your XP, bookmarks, and calendar choices sync through your Google Drive once Google is connected.</p>
 
     <fieldset>
+      <legend>Dungeon display</legend>
+      <label for="themeChoice">Theme</label>
+      <select id="themeChoice"><option value="dark">Dungeon · dark</option><option value="light">Surface · light</option><option value="system">Follow device</option></select>
+      <label for="densityChoice">Desktop layout</label>
+      <select id="densityChoice"><option value="compact">Compact command center</option><option value="comfortable">Comfortable</option></select>
+      <p class="note">Compact fits more panels on desktop. Mobile keeps a single, readable column.</p>
+    </fieldset>
+
+    <fieldset>
       <legend>Google Calendar</legend>
       <label for="gclient">OAuth Client ID</label>
       <input id="gclient" placeholder="123456789-abc.apps.googleusercontent.com" autocomplete="off" spellcheck="false">
@@ -227,14 +237,22 @@
       <p class="note" id="cityResult"></p>
     </fieldset>
 
+    <fieldset>
+      <legend>Settings backup</legend>
+      <p class="note">Export the current menu values, appearance, location, bookmarks, and calendar choices as JSON. XP and Google sign-in sessions are not included.</p>
+      <label class="checkline"><input id="exportSecrets" type="checkbox"> Include Todoist and Anthropic API keys</label>
+      <p class="note">Leave unchecked for a file without API keys. If included, keep the downloaded file private.</p>
+      <button class="ghost" id="exportSettings" type="button">Export settings JSON</button>
+    </fieldset>
     <div class="row" style="justify-content:flex-end;margin-top:6px">
-      <button class="primary" id="saveKeys" type="button">Save Keys</button>
+      <button class="primary" id="saveKeys" type="button">Save Settings</button>
     </div>
   </div>
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="dashboard-data.js"></script>
 <script src="atlas.js"></script>
 </body>
 </html>
