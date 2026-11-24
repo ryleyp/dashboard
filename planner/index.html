@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Timeblock</title>
+<meta name="description" content="Plan your week from Todoist and Google Calendar in one place.">
+<meta name="theme-color" content="#eef1f5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#11151b" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Timeblock">
+<link rel="icon" href="../icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app" id="app">
+  <aside class="side" id="side">
+    <section class="clock" aria-label="Current time">
+      <div class="flip"><span id="clkH">--</span><span id="clkM">--</span></div>
+      <div class="clock-meta">
+        <div id="clkDay" class="clock-day"></div>
+        <div id="clkSummary" class="clock-sum"></div>
+      </div>
+    </section>
+
+    <section class="card" id="top3Card">
+      <header class="card-h"><h2>Today's non-negotiables</h2><span class="pill" id="top3Count">0 / 3</span></header>
+      <ol class="top3" id="top3List"></ol>
+      <p class="hint" id="top3Hint">Tap the star on any task to make it one of today's three.</p>
+    </section>
+
+    <section class="card">
+      <header class="card-h"><h2>Task dump</h2></header>
+      <form id="dumpForm" class="dump" autocomplete="off">
+        <input id="dumpInput" type="text" placeholder="Call the dentist tomorrow 2pm #Personal" aria-label="New Todoist task">
+        <button type="submit" class="btn btn-accent">Add</button>
+      </form>
+      <p class="hint">Goes straight to Todoist. Dates, times, #projects and p1–p4 work like Todoist quick add.</p>
+    </section>
+
+    <section class="card">
+      <header class="card-h"><h2>Today</h2><span class="pill" id="todayCount">0</span></header>
+      <ul class="tasks" id="todayList"></ul>
+    </section>
+
+    <section class="card card-warn" id="overdueCard">
+      <header class="card-h"><h2>Overdue</h2><span class="pill pill-warn" id="overdueCount">0</span></header>
+      <p class="hint">Drag onto the calendar to reschedule, or move it to today.</p>
+      <ul class="tasks" id="overdueList"></ul>
+    </section>
+
+    <section class="card">
+      <header class="card-h"><h2>No date yet</h2><span class="pill" id="undatedCount">0</span></header>
+      <p class="hint">Drag onto a day or time to plan your week.</p>
+      <ul class="tasks" id="undatedList"></ul>
+    </section>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="nav">
+        <button class="btn btn-ghost icon" id="prevWeek" aria-label="Previous week">‹</button>
+        <button class="btn btn-ghost" id="thisWeek">Today</button>
+        <button class="btn btn-ghost icon" id="nextWeek" aria-label="Next week">›</button>
+        <h1 id="weekLabel">This week</h1>
+      </div>
+      <div class="nav">
+        <span class="status" id="status"></span>
+        <a class="btn btn-ghost" href="../">Dashboard</a>
+        <button class="btn btn-ghost" id="refreshBtn">Refresh</button>
+        <button class="btn btn-ghost" id="settingsBtn">Settings</button>
+      </div>
+    </header>
+    <div class="banner" id="banner" hidden></div>
+    <nav class="daytabs" id="dayTabs" aria-label="Choose a day"></nav>
+    <div class="week" id="week"></div>
+  </main>
+</div>
+
+<div class="setup-wrap" id="setup" hidden>
+  <div class="setup">
+    <h1>Timeblock</h1>
+    <p>Your Todoist tasks and Google Calendar on one week, so you can block time for what matters. Everything stays in this browser: your keys are stored on this device only and sent only to Todoist and Google.</p>
+
+    <section class="step">
+      <h2>1. Todoist</h2>
+      <p>In Todoist, open <b>Settings → Integrations → Developer</b> and copy your API token.</p>
+      <form id="todoistForm" class="row" autocomplete="off">
+        <input id="todoistInput" type="password" placeholder="Paste your Todoist API token" aria-label="Todoist API token">
+        <button class="btn btn-accent" type="submit">Save</button>
+      </form>
+      <p class="ok" id="todoistOk" hidden>Todoist connected.</p>
+    </section>
+
+    <section class="step">
+      <h2>2. Google Calendar</h2>
+      <div id="gNeedsClient">
+        <p>This uses the same Google Cloud client ID as the dashboard. If you set Google up there, it's filled in already; otherwise follow the <a href="https://github.com/ryleyp/dashboard#2-google-calendar-the-schedule-celebrations-and-cross-device-sync" target="_blank" rel="noopener">README steps</a>.</p>
+        <form id="gClientForm" class="row" autocomplete="off">
+          <input id="gClientInput" type="text" placeholder="1234-abc.apps.googleusercontent.com" aria-label="Google OAuth client ID">
+          <button class="btn" type="submit">Save</button>
+        </form>
+      </div>
+      <button class="btn btn-accent" id="gConnectSetup" hidden>Connect Google Calendar</button>
+      <p class="ok" id="gOk" hidden>Google Calendar connected.</p>
+    </section>
+
+    <div class="row end"><button class="btn btn-ghost" id="skipSetup">Open planner</button></div>
+  </div>
+</div>
+
+<dialog id="settings" class="settings">
+  <form method="dialog" class="settings-in">
+    <header class="card-h"><h2>Settings</h2><button class="btn btn-ghost" value="close">Done</button></header>
+
+    <section>
+      <h3>Calendars to show</h3>
+      <div id="calList" class="cal-list"><p class="hint">Connect Google Calendar to choose calendars.</p></div>
+    </section>
+
+    <section>
+      <h3>Time blocks</h3>
+      <label class="check"><input type="checkbox" id="mirrorToggle"> Also put each time block on my Google Calendar</label>
+      <p class="hint">Blocked tasks get a time and length in Todoist. With this on, a matching busy event is added to your main calendar and moved when you move the block.</p>
+      <div class="row">
+        <label>Day starts <select id="hStart"></select></label>
+        <label>Day ends <select id="hEnd"></select></label>
+      </div>
+    </section>
+
+    <section>
+      <h3>Connections</h3>
+      <div class="row wrap">
+        <button type="button" class="btn" id="gConnect">Connect Google</button>
+        <button type="button" class="btn" id="editKeys">Change keys</button>
+        <button type="button" class="btn btn-danger" id="signOut">Forget everything on this device</button>
+      </div>
+      <p class="hint" id="signOutHint">Removes your Todoist token, Google sign-in and preferences from this browser. Nothing in Todoist or Google changes.</p>
+    </section>
+  </form>
+</dialog>
+
+<div class="pop" id="pop" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="config.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer onload="window.__gsiReady && window.__gsiReady()"></script>
+<script src="app.js"></script>
+</body>
+</html>
