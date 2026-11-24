@@ -1,6 +1,6 @@
 /* Ryley's Atlas service worker: network first for the app shell, cache as a fallback when offline. */
-const CACHE = "atlas-v4";
-const SHELL = ["./", "./index.html", "./atlas.css", "./atlas.js", "./dashboard-data.js", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png"];
+const CACHE = "atlas-v5";
+const SHELL = ["./", "./index.html", "./planner/", "./planner/index.html", "./planner/style.css", "./planner/app.js", "./planner/config.js", "./atlas.css", "./atlas.js", "./dashboard-data.js", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

@@ -56,6 +56,18 @@ The key is stored only in this browser and is sent directly from your browser to
 
 In the Crawler Menu, type your city and click **Find**. Weather comes from Open-Meteo and needs no key.
 
+## Week Planner
+
+Open it with the calendar button in the dashboard header, or go straight to `https://ryleyp.github.io/dashboard/planner/`. It puts every open Todoist task and your Google calendars on one Monday-to-Sunday grid so you can time-block your week:
+
+- **Today's non-negotiables:** star up to three tasks for today. Stars are kept per day on that device.
+- **Task dump:** type a task and it goes to Todoist through quick add, so `call dentist tomorrow 2pm #Personal p1` works.
+- **Today, Overdue, No date yet:** drag any task onto a time slot to block it, onto the all-day row to move it to that day, or tap it to pick a day, start time and length. Overdue tasks also get a **Today** button.
+- **Time blocks:** a blocked task gets that date, time and length in Todoist; repeating tasks keep their repeat rule. With **Settings → Also put each time block on my Google Calendar** on (the default), a matching busy event goes on your main calendar and moves when you move the block.
+- Each day header shows meeting time and blocked task time for that day.
+
+The planner reuses the Todoist token and Google client ID saved by the dashboard on the same device, so there is nothing new to enter. Google asks for one extra permission the first time you click **Connect Google**: it needs to create and edit events (the dashboard itself stays read-only). Tokens stay in the browser, like the rest of the dashboard. On a phone, tap a task to schedule it, since drag and drop needs a mouse.
+
 ## Appearance and settings export
 
 In the **Crawler Menu**, choose **Dungeon** (dark), **Surface** (light), or **Follow device**. The default **Compact command center** uses a denser desktop grid; **Comfortable** keeps the roomier layout. Both the Schedule and Quest Log have small, independently scrollable content boxes: 220 pixels high on desktop and 200 pixels on mobile. They support keyboard scrolling, and expanded quest details stay inside the box. Mobile retains a single column. Appearance is saved per browser when you click **Save Settings**.
@@ -85,6 +97,7 @@ Then open `http://localhost:8080/`. Remember to add that origin to your Google O
 - `atlas.css` is the styling: a dark dungeon theme by default, with a lighter surface theme when your device prefers light mode.
 - `atlas.js` holds UI logic and API calls.
 - `dashboard-data.js` handles settings exports, completion-history pagination, and XP ledger accounting.
+- `planner/` is the week planner (`index.html`, `style.css`, `app.js`, `config.js`).
 - `manifest.webmanifest` and `sw.js` make it installable as a home-screen app.
 - `icons/` holds the app icons.
 
